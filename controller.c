@@ -8,7 +8,7 @@
 #include <string.h>
 #include <fcntl.h>
 
-#define KEY 12
+#define KEY 12 //decided not to use for semget only using for shmget bc can't access the same semaphore from 2 files!!
 
 //doesnt work without manual declaration for some reason. say storage size su unknown
 union semun {
@@ -18,10 +18,11 @@ union semun {
   struct seminfo *__buf;
 };
 
+//helper fxn for creating semaphore.
 void createsem(){
-  int shmid = shmget(KEY, 1024, IPC_CREAT | IPC_EXCL | 0644); //shared mem
+  int shmid = shmget(ftok("makefile", 13), 1024, IPC_CREAT | IPC_EXCL | 0644); //shared mem & using ftok so that the sem can be used in main.c as well
     if(shmid < 0){
-      printf("Semaphore already exists, please remove using ./a.out -r before tryin again.\n");
+      printf("Semaphore already exists, please remove using ./controller -r before tryin again.\n");
     }
     else{
       int newsem = open("story.txt", O_CREAT | O_TRUNC, 0644); //creating story file
@@ -33,11 +34,12 @@ void createsem(){
     }
 }
 
+//helper fxn for viewing sems
 void viewsem(){ //view current story
-  int shmid = shmget(KEY, 1024, 0644); //shared mem
+  int shmid = shmget(ftok("makefile", 13), 1024, 0644); //shared mem
   // int semneeded = semctl(id,0,GETVAL);
   if(shmid == -1){
-    printf("Semaphore doesn't exist. Please use ./a.out -c before attempting to view the file.\n");
+    printf("Semaphore doesn't exist. Please use ./controller -c before attempting to view the file.\n");
   }
   else{
     char * story = (char *)calloc(sizeof(char),1024);
@@ -47,14 +49,15 @@ void viewsem(){ //view current story
   }
 }
 
+//helper fxn for removing sems
 void removesem(){
-  int shmid = shmget(KEY, 1024, 0); //shared mem
+  int shmid = shmget(ftok("makefile", 13), 1024, 0); //shared mem
   //int semneeded = semctl(id,0,IPC_RMID);
   if(shmid == -1){
-    printf("Semaphore doesn't exist. Please use ./a.out -c before attempting to remove the file.\n");
+    printf("Semaphore doesn't exist. Please use ./controller -c before attempting to remove the file.\n");
   }
   else{
-    int semid = semget(KEY, 1, 0);
+    int semid = semget(ftok("makefile", 13), 1, 0);//creating universal key to use 
     char * story = (char *)calloc(sizeof(char),1024);
     int fd = open("story.txt",O_RDONLY, 0644);
     read(fd,story,1024);
